@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"github.com/blang/semver"
+	"github.com/coroot/coroot-pg-agent/constants"
 	"github.com/coroot/logger"
 	_ "github.com/lib/pq"
 	"github.com/prometheus/client_golang/prometheus"
@@ -277,7 +278,7 @@ func (c *Collector) queryMetrics(ch chan<- prometheus.Metric) {
 
 	for k, summary := range top(summaries, topQueriesN) {
 		ch <- gauge(dTopQueryCalls, summary.Queries/interval.Seconds(), k.DB, k.User, k.Query)
-		if queryTime := summary.TotalTime / interval.Seconds(); queryTime >= 0.005 {
+		if queryTime := summary.TotalTime / interval.Seconds(); queryTime >= constants.MinimumQueryTime {
 			ch <- gauge(dTopQueryTime, queryTime, k.DB, k.User, k.Query)
 		}
 		ch <- gauge(dTopQueryIOTime, summary.IOTime/interval.Seconds(), k.DB, k.User, k.Query)
