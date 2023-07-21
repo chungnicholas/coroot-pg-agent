@@ -276,12 +276,24 @@ func (c *Collector) queryMetrics(ch chan<- prometheus.Metric) {
 		ch <- gauge(dDbQueries, queries/interval.Seconds(), db)
 	}
 
+	//// Default coroot pg agent metrics
+	//// Exposes top N queries by total execution time
+	//for k, summary := range top(summaries, topQueriesN) {
+	//	ch <- gauge(dTopQueryCalls, summary.Queries/interval.Seconds(), k.DB, k.User, k.Query)
+	//	ch <- gauge(dTopQueryTime, summary.TotalTime/interval.Seconds(), k.DB, k.User, k.Query)
+	//	ch <- gauge(dTopQueryIOTime, summary.IOTime/interval.Seconds(), k.DB, k.User, k.Query)
+	//}
+
+	// Custom coroot pg agent metrics collection
+	// Exposes queries above a certain threshold specified in constants.go
 	for k, summary := range top(summaries, topQueriesN) {
 		ch <- gauge(dTopQueryCalls, summary.Queries/interval.Seconds(), k.DB, k.User, k.Query)
-		if queryTime := summary.TotalTime / interval.Seconds(); queryTime >= constants.MinimumQueryTime {
+		if queryTime := summary.TotalTime / interval.Seconds(); constants.MinimumQueryExecutionTime == -1 || queryTime >= constants.MinimumQueryExecutionTime {
 			ch <- gauge(dTopQueryTime, queryTime, k.DB, k.User, k.Query)
 		}
-		ch <- gauge(dTopQueryIOTime, summary.IOTime/interval.Seconds(), k.DB, k.User, k.Query)
+		if queryTime := summary.TotalTime / interval.Seconds(); constants.MinimumQueryIoWaitingTime == -1 || queryTime >= constants.MinimumQueryIoWaitingTime {
+			ch <- gauge(dTopQueryIOTime, summary.IOTime/interval.Seconds(), k.DB, k.User, k.Query)
+		}
 	}
 }
 
